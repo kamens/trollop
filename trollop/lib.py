@@ -464,6 +464,7 @@ class Sticker(LazyTrello):
     _prefix = '/stickers/'
 
     image = Field()
+    imageUrl = Field()
 
 
 class CustomSticker(LazyTrello):
