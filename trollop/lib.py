@@ -73,6 +73,9 @@ class TrelloConnection(object):
     def get_organization(self, org_id):
         return Organization(self, org_id)
 
+    def get_token(self, token):
+        return Token(self, token)
+
     @property
     def me(self):
         """
@@ -99,6 +102,19 @@ class Deletable(object):
     def delete(self):
         path = self._prefix + self._id
         self._conn.delete(path)
+
+
+class WebHookable(object):
+    """
+    Mixin for Trello objects which can have webhooks attached to 'em.
+    """
+    def add_webhook(self, callbackURL):
+        """Attach a webhook to this object which hits callbackURL on events."""
+        path = WebHook._prefix
+        params = {'idModel': self._id, 'callbackURL': callbackURL}
+        data = json.loads(self._conn.post(path, params=params))
+        webhook = WebHook(self._conn, data['id'], data)
+        return webhook
 
 
 class Labeled(object):
@@ -296,7 +312,7 @@ class Action(LazyTrello):
     creator = ObjectField('idMemberCreator', 'Member')
 
 
-class Board(LazyTrello, Closable):
+class Board(LazyTrello, Closable, WebHookable):
 
     _prefix = '/boards/'
 
@@ -444,6 +460,21 @@ class Sticker(LazyTrello):
     image = Field()
 
 
+class CustomSticker(LazyTrello):
+    _prefix = '/customStickers/'
+
+    url = Field()
+
+
+class WebHook(LazyTrello, Deletable):
+    _prefix = '/webhooks/'
+
+    active = BoolField()
+    callbackURL = Field()
+    description = Field()
+    idModel = Field()
+
+
 class Attachment(LazyTrello):
     # deletable through card
     _prefix = '/attachments/'
@@ -470,6 +501,14 @@ class Member(LazyTrello):
     cards = SubList('Card')
     notifications = SubList('Notification')
     organizations = SubList('Organization')
+    customStickers = SubList('CustomSticker')
+
+
+class Token(LazyTrello):
+
+    _prefix = '/tokens/'
+
+    webhooks = SubList('WebHook')
 
 
 class Notification(LazyTrello):
