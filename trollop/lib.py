@@ -2,7 +2,8 @@ from urllib import urlencode
 import json
 import isodate
 
-import requests
+# KA: swapped urlfetch in for requests in order to play nice w/ App Engine
+from google.appengine.api import urlfetch
 
 
 def get_class(str_or_class):
@@ -17,8 +18,6 @@ def get_class(str_or_class):
 class TrelloConnection(object):
 
     def __init__(self, api_key, oauth_token):
-        self.session = requests.session()
-
         self.key = api_key
         self.token = oauth_token
 
@@ -32,24 +31,14 @@ class TrelloConnection(object):
         params.update({'key': self.key, 'token': self.token})
         url += '?' + urlencode(params)
 
-        # Trello recently got picky about headers.  Only set content type if
-        # we're submitting a payload in the body
-        namedFile = None
-        if body:
-          headers = {'Content-Type': 'application/json'}
-          if method == 'POST':
-            if filename:
-              namedFile = (filename,body)
-            elif hasattr(body, 'name'):
-              namedFile = (body.name, body)
-        else:
-          headers = None
-        if namedFile:
-          response = requests.post(url, files=dict(file=namedFile))
-        else:
-          response = self.session.request(method, url, data=body, headers=headers)
-        response.raise_for_status()
-        return response.text
+        # KA: doesn't currently support file uploads. This was removed when we
+        # swapped urlfetch in for requests, and we'll add it back in if/when
+        # we need it.
+        response = urlfetch.fetch(url=url, method=method)
+        if response.status_code != 200:
+            raise Exception("Error: (%s) \"%s\"" %
+                    (response.status_code, response.content))
+        return response.content
 
     def get(self, path, params=None):
         return self.request('GET', path, params)
