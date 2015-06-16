@@ -225,12 +225,18 @@ class SubList(object):
         self._lists = {}
 
     def __get__(self, instance, owner):
-        if not instance._id in self._lists:
+        # KA: trollop's SubList does some dangerous caching on the SubList
+        # class. This can result in stale data reads. We're working around the
+        # bug and not trying to refactor trollop's code by making the cache key
+        # use both the Trello object's instance id and the python object's
+        # identity according to id().
+        list_id = "%s:%s" % (instance._id, id(instance))
+        if not list_id in self._lists:
             cls = get_class(self.cls)
             path = instance._prefix + instance._id + cls._prefix
             data = json.loads(instance._conn.get(path))
-            self._lists[instance._id] = [cls(instance._conn, d['id'], d) for d in data]
-        return self._lists[instance._id]
+            self._lists[list_id] = [cls(instance._conn, d['id'], d) for d in data]
+        return self._lists[list_id]
 
 
 class TrelloMeta(type):
